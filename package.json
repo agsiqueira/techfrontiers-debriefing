@@ -1,0 +1,67 @@
+{
+  "name": "tech-frontiers-debriefing-coach",
+  "version": "1.0.0",
+  "description": "Tech Frontiers Debriefing Coach for CIS4930 using UF NaviGator API keys.",
+  "main": "main.js",
+
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "pack:win": "electron-builder --win --dir",
+    "pack:mac": "electron-builder --mac --dir"
+  },
+
+  "dependencies": {
+    "docx": "^8.5.0",
+    "mammoth": "^1.8.0"
+  },
+
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+
+  "build": {
+    "appId": "edu.ufl.techfrontiers.debriefingcoach",
+    "productName": "Tech Frontiers Debriefing Coach",
+
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+
+    "files": [
+      "**/*",
+      "!dist/**/*",
+      "!node_modules/.cache/**/*"
+    ],
+
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.education"
+    },
+
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

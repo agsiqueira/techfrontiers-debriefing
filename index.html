@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tech Frontiers Debriefing Coach</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">TF</div>
+        <div>
+          <h1>Tech Frontiers</h1>
+          <p>Debriefing Coach</p>
+        </div>
+      </div>
+      <p class="sidebar-note">Upload your pre-talk reflection, then work through a guided debriefing session. Your final report can be reviewed and revised before Canvas submission.</p>
+      <section class="panel">
+        <h2><span class="panel-title"><span class="step-badge">1</span>NaviGator Settings</span></h2>
+        <label>UF NaviGator API Key</label>
+        <input id="apiKey" type="password" placeholder="Paste your NaviGator API key" />
+        <label>Model</label>
+        <input id="modelName" type="text" value="gpt-5-mini" />
+        <button id="saveSettingsBtn">Save Settings</button>
+        <p class="small">The key is stored only in this app on this computer.</p>
+      </section>
+      <section class="panel">
+        <h2><span class="panel-title"><span class="step-badge">2</span>Pre-Talk Reflection</span></h2>
+        <button id="uploadBtn">Upload Pre-Talk Reflection</button>
+        <p id="fileStatus" class="small muted">No file uploaded yet.</p>
+      </section>
+      <section class="panel">
+        <h2><span class="panel-title"><span class="step-badge">3</span>Session</span></h2>
+        <button id="startBtn">Start Debriefing</button>
+        <button id="finishBtn" class="secondary">Finish and Generate Report</button>
+        <button id="resetBtn" class="danger">Reset Session</button>
+      </section>
+      <section class="panel compact">
+        <h2><span class="panel-title"><span class="step-badge">4</span>Progress</span></h2>
+        <ol id="progressList"></ol>
+      </section>
+    </aside>
+
+    <main class="chat-area">
+      <header class="chat-header">
+        <div>
+          <h2>Guided Post-Talk Debriefing</h2>
+          <p>Answer thoughtfully. The coach will ask one question at a time.</p>
+        </div>
+      </header>
+      <div id="chatMessages" class="chat-messages"></div>
+      <div class="input-area">
+        <textarea id="userInput" rows="2" placeholder="Type your response here..."></textarea>
+        <button id="sendBtn">Send</button>
+      </div>
+    </main>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

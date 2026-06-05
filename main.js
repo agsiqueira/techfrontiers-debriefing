@@ -4,6 +4,7 @@ const fs = require('fs');
 const mammoth = require('mammoth');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } = require('docx');
 
+const CIMATEC_PROXY_URL = 'https://tech-frontiers-senai-cimatec-openai-proxy.alexandre-g-siqueira.workers.dev/';
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -214,7 +215,7 @@ ipcMain.handle('save-docx-report', async (_event, payload) => {
   }
 
   children.push(heading('Submission Reminder'));
-  children.push(textPara('Please review and revise this document before submitting it to Canvas. The instructional team will review and grade the submission. Uploading the final document to Canvas is required for the assignment to count as submitted.'));
+  children.push(textPara('Please review and revise this document before submitting it. The instructional team will review and grade the submission. Uploading the final document is required for the assignment to count as submitted.'));
 
   const doc = new Document({
     styles: {
@@ -258,4 +259,25 @@ ipcMain.handle('save-docx-report', async (_event, payload) => {
   const buffer = await Packer.toBuffer(doc);
   fs.writeFileSync(result.filePath, buffer);
   return { canceled: false, filePath: result.filePath };
+});
+
+ipcMain.handle('call-cimatec', async (_event, payload) => {
+  const response = await fetch(CIMATEC_PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messages: payload.messages,
+      maxTokens: payload.maxTokens
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`CIMATEC proxy error ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.content || '';
 });

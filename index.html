@@ -16,15 +16,20 @@
           <p>Debriefing Coach</p>
         </div>
       </div>
-      <p class="sidebar-note">Upload your pre-talk reflection, then work through a guided debriefing session. Your final report can be reviewed and revised before Canvas submission.</p>
+      <p class="sidebar-note">Upload your pre-talk reflection, then work through a guided debriefing session. Your final report can be reviewed and revised before submission.</p>
       <section class="panel">
-        <h2><span class="panel-title"><span class="step-badge">1</span>NaviGator Settings</span></h2>
-        <label>UF NaviGator API Key</label>
-        <input id="apiKey" type="password" placeholder="Paste your NaviGator API key" />
+        <h2><span class="panel-title"><span class="step-badge">1</span><span id="settingsTitle">NaviGator Settings</span></span></h2>
+        <label>AI Provider</label>
+        <select id="aiProvider">
+          <option value="navigator">UF NaviGator</option>
+          <option value="cimatec">SENAI CIMATEC</option>
+        </select>
+        <label id="apiKeyLabel">UF NaviGator API Key</label>
+        <input id="apiKey" type="password" placeholder="Paste your API key" />
         <label>Model</label>
-        <input id="modelName" type="text" value="gpt-5-mini" />
+        <input id="modelName" type="text" value="granite-3.3-8b-instruct" />
         <button id="saveSettingsBtn">Save Settings</button>
-        <p class="small">The key is stored only in this app on this computer.</p>
+        <p id="settingsHelp" class="small">The key is stored only in this app on this computer.</p>
       </section>
       <section class="panel">
         <h2><span class="panel-title"><span class="step-badge">2</span>Pre-Talk Reflection</span></h2>

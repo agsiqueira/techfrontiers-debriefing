@@ -1,8 +1,9 @@
 const NAVIGATOR_URL = 'https://api.ai.it.ufl.edu/v1/chat/completions';
 
 const state = {
+  aiProvider: localStorage.getItem('tf_aiProvider') || 'navigator',
   apiKey: localStorage.getItem('tf_apiKey') || '',
-  model: localStorage.getItem('tf_model') || 'gpt-5-mini',
+  model: localStorage.getItem('tf_model') || 'granite-3.3-8b-instruct',
   pretalkText: '',
   pretalkFileName: '',
   studentName: '',
@@ -38,8 +39,11 @@ const feedbackQuestions = [
 const el = id => document.getElementById(id);
 
 function init() {
+  el('aiProvider').value = state.aiProvider;
   el('apiKey').value = state.apiKey;
   el('modelName').value = state.model;
+  el('aiProvider').addEventListener('change', handleProviderChange);
+  handleProviderChange();
   el('sendBtn').addEventListener('click', handleSend);
   el('userInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
   el('saveSettingsBtn').addEventListener('click', saveSettings);
@@ -47,16 +51,64 @@ function init() {
   el('startBtn').addEventListener('click', startSession);
   el('finishBtn').addEventListener('click', finishSession);
   el('resetBtn').addEventListener('click', resetSession);
-  addMessage('coach', 'Welcome. Upload your completed pre-talk reflection essay, save your NaviGator API key, and then start the debriefing session.');
+  addMessage('coach', 'Welcome. Upload your completed pre-talk reflection essay, choose your AI provider, save your API key/model, and then start the debriefing session.');
   renderProgress();
 }
 
+function handleProviderChange() {
+  const provider = el('aiProvider').value || 'navigator';
+  state.aiProvider = provider;
+
+  const apiKeyInput = el('apiKey');
+  const modelInput = el('modelName');
+
+  if (provider === 'cimatec') {
+    el('settingsTitle').textContent = 'SENAI CIMATEC Settings';
+    el('apiKeyLabel').textContent = 'SENAI CIMATEC API Key';
+
+    apiKeyInput.value = '';
+    apiKeyInput.placeholder = 'Managed by the Instructors';
+    apiKeyInput.disabled = true;
+
+    modelInput.value = 'gpt-4o-mini';
+    modelInput.placeholder = 'gpt-4o-mini';
+    modelInput.disabled = true;
+
+    el('settingsHelp').textContent = 'SENAI CIMATEC uses a managed OpenAI configuration. Students cannot edit the API key or model.';
+  } else {
+    el('settingsTitle').textContent = 'NaviGator Settings';
+    el('apiKeyLabel').textContent = 'UF NaviGator API Key';
+
+    apiKeyInput.disabled = false;
+    apiKeyInput.placeholder = 'Paste your API key';
+    apiKeyInput.value = state.apiKey || '';
+
+    modelInput.disabled = false;
+    modelInput.placeholder = 'granite-3.3-8b-instruct';
+
+    if (!modelInput.value || modelInput.value === 'gpt-4o-mini' || modelInput.value.startsWith('gemini-')) {
+      modelInput.value = 'granite-3.3-8b-instruct';
+    }
+
+    el('settingsHelp').textContent = 'The key is stored only in this app on this computer.';
+  }
+}
+
 function saveSettings() {
-  state.apiKey = el('apiKey').value.trim();
-  state.model = el('modelName').value.trim() || 'gpt-5-mini';
+  state.aiProvider = el('aiProvider').value || 'navigator';
+
+  if (state.aiProvider === 'cimatec') {
+    state.model = 'gpt-4o-mini';
+  } else {
+    state.apiKey = el('apiKey').value.trim();
+    state.model = el('modelName').value.trim() || 'granite-3.3-8b-instruct';
+  }
+
+  localStorage.setItem('tf_aiProvider', state.aiProvider);
   localStorage.setItem('tf_apiKey', state.apiKey);
   localStorage.setItem('tf_model', state.model);
-  addMessage('system', 'Settings saved.');
+
+  addMessage('system', `Settings saved for ${state.aiProvider === 'cimatec' ? 'SENAI CIMATEC' : 'UF NaviGator'}.`);
 }
 
 async function uploadPretalk() {
@@ -75,20 +127,50 @@ async function uploadPretalk() {
 }
 
 function parsePretalkFields() {
-  const t = state.pretalkText;
-  function find(label) {
-    const re = new RegExp(label + '\\s*:?\\s*([^\\n]+)', 'i');
-    const m = t.match(re);
-    return m ? m[1].trim() : '';
+  const t = String(state.pretalkText || '').replace(/\r/g, '');
+
+  function find(labels) {
+    for (const label of labels) {
+      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(
+        '^\\s*(?:[-•*]\\s*)?' + escaped + '\\s*:?\\s*(.+?)\\s*$',
+        'im'
+      );
+      const m = t.match(re);
+      if (m && m[1]) return m[1].trim();
+    }
+    return '';
   }
-  state.studentName = find('Student Name');
-  state.presentationTitle = find('Presentation Title');
-  state.speakerName = find('Speaker Name');
-  state.moduleInfo = find('Module Number') || find('Module Number and Title');
+
+  state.studentName = find([
+    'Student Name',
+    'Name'
+  ]);
+
+  state.presentationTitle = find([
+    'Presentation Title',
+    'Presentation',
+    'Talk Title',
+    'Title'
+  ]);
+
+  state.speakerName = find([
+    'Speaker Name',
+    'Speaker',
+    'Presenter',
+    'Presenter Name'
+  ]);
+
+  state.moduleInfo = find([
+    'Module Number and Title',
+    'Module Number',
+    'Module',
+    'Module Title'
+  ]);
 }
 
 function startSession() {
-  if (!state.apiKey) { addMessage('warning', 'Please save your NaviGator API key first.'); return; }
+  if (state.aiProvider !== 'cimatec' && !state.apiKey) { addMessage('warning', 'Please save your API key first.'); return; }
   if (!state.pretalkText) { addMessage('warning', 'Please upload your completed pre-talk reflection essay first.'); return; }
   state.started = true;
   state.finished = false;
@@ -129,7 +211,7 @@ async function handleSend() {
     return;
   }
 
-  if (wordCount(text) < 3) {
+  if (wordCount(text) < 5) {
     addMessage('warning', `Your response is currently too brief for a meaningful reflective debriefing. The goal is thoughtful reflection and critical engagement. A Reflection Transcript documenting this conversation will be included in the final document, and the instructional team will review the submission using the course rubric.\n\nPlease answer the question again with additional detail.\n\n${state.awaiting.question}`);
     return;
   }
@@ -192,16 +274,16 @@ async function askModelForStudentQuestion(questionText) {
     { role:'system', content:`You are a warm, concise course debriefing coach. The user asked a question instead of answering the current reflection prompt. Answer directly and briefly in 1-3 sentences, then do not ask a new question. Do not say “based on the student” or “a fitting question could be.” Talk directly to the user.` },
     { role:'user', content:`Pre-talk reflection context:\n${state.pretalkText.slice(0,4000)}\n\nCurrent reflection prompt: ${state.awaiting.question}\n\nStudent question: ${questionText}` }
   ];
-  return await callNavigator(messages, 220);
+  return await callAI(messages, 220);
 }
 
 async function generateConversationalReflection(answer, current) {
   const stage = current.stage != null ? stages[current.stage] : null;
   const messages = [
-    { role:'system', content:`You are a conversational debriefing coach speaking directly to the student. Write exactly ONE short sentence reacting to the student's answer. Speak in second person using words like “you” or “it sounds like.” Do NOT refer to “the student.” Do NOT say “based on your reflection,” “a fitting Socratic follow-up,” “this response suggests,” or any meta-commentary about prompts. Do NOT ask a question. Keep it natural, warm, and specific.` },
+    { role:'system', content:`You are a thoughtful debriefing facilitator. Respond with ONE brief conversational acknowledgement. Keep it natural and human. Use 5-15 words. Speak directly to the student. Do not analyze the answer. Do not evaluate the answer. Do not summarize the answer. Do not ask a question.` },
     { role:'user', content:`Current topic: ${stage ? stage.label : 'Reflection'}\nQuestion asked: ${current.question}\nStudent answer: ${answer}\n\nWrite one conversational sentence to acknowledge and lightly reason about the answer.` }
   ];
-  let response = await callNavigator(messages, 90);
+  let response = await callAI(messages, 220);
   response = cleanMetaLanguage(response);
   return response;
 }
@@ -225,7 +307,7 @@ function cleanMetaLanguage(text) {
 
 async function finishSession() {
   if (!state.started) { addMessage('warning', 'Please complete or start a session before generating the report.'); return; }
-  addMessage('coach', 'I’m generating the final report now. Please review and revise it before uploading it to Canvas.');
+  addMessage('coach', 'I’m generating the final report now. Please review and revise it before uploading it.');
   const reportText = await generateReport();
   const saveResult = await window.electronAPI.saveDocxReport({
     studentName: state.studentName || 'Student',
@@ -235,7 +317,7 @@ async function finishSession() {
   });
   if (saveResult && !saveResult.canceled) {
     addMessage('system', `Final DOCX saved: ${saveResult.filePath}`);
-    addMessage('coach', 'Your final document has been generated. Please review and revise it as needed, then upload it to the appropriate Canvas assignment. The instructional team will review and grade the submission, and the Canvas upload is required for the assignment to count as submitted.');
+    addMessage('coach', 'Your final document has been generated. Please review and revise it as needed, then upload it. The instructional team will review and grade the submission, and the upload is required for the assignment to count as submitted.');
   }
 }
 
@@ -281,6 +363,35 @@ function buildSectionFromAnswers(stageKey) {
   return [main, follow]
     .filter(Boolean)
     .join(' ');
+}
+
+
+function buildPresentationInformationSection() {
+  const lines = [];
+
+  lines.push('Student Name');
+  lines.push(state.studentName || '');
+
+  lines.push('');
+  lines.push('Presentation Information');
+
+  if (state.presentationTitle) {
+    lines.push(`Presentation Title: ${state.presentationTitle}`);
+  }
+
+  if (state.speakerName) {
+    lines.push(`Speaker Name: ${state.speakerName}`);
+  }
+
+  if (state.moduleInfo) {
+    lines.push(`Module: ${state.moduleInfo}`);
+  }
+
+  if (!state.presentationTitle && !state.speakerName && !state.moduleInfo) {
+    lines.push('No presentation information was detected from the uploaded pre-talk reflection.');
+  }
+
+  return lines.join('\n');
 }
 
 async function generateReport() {
@@ -334,9 +445,14 @@ async function generateReport() {
     await buildDebriefSection('finalReflection', 'Final Reflection')
   ]);
 
-  return sections.map(([title, body]) => {
+  const essaySections = sections.map(([title, body]) => {
     return `${title}\n${cleanReportText(body)}`;
   }).join('\n\n');
+
+  return [
+    buildPresentationInformationSection(),
+    essaySections
+  ].filter(Boolean).join('\n\n');
 }
 
 async function buildDebriefSection(stageKey, sectionTitle) {
@@ -362,16 +478,18 @@ async function polishSection(sectionTitle, sourceText, sourceType) {
   const messages = [
     {
       role: 'system',
-      content: `You are revising student reflection text into polished first-person prose.
+      content: `You are an academic reflection editor. Transform the student's responses into a cohesive first-person reflective essay paragraph.
 
 Rules:
 - ${sourceRule}
 - Use only the provided source text.
-- Do not add examples, claims, facts, details, interpretations, or conclusions.
+- Do not invent facts, examples, or opinions.
+- You may improve transitions, organization, narrative flow, and reflective connections supported by the student's responses.
 - Do not infer answers for other report sections.
 - Do not mention Dr. Lok, the presentation title, or specific applications unless they appear in the source text.
 - Improve grammar, readability, and flow.
 - Preserve the student's meaning faithfully.
+- Write as a polished university reflection essay rather than a transcript summary.
 - Keep the writing concise and natural.
 - If this is the Summary of Initial Expectations section:
   - keep it to a single concise paragraph
@@ -393,7 +511,7 @@ ${sourceText}`
     }
   ];
 
-  return await callNavigator(messages, 350);
+  return await callAI(messages, 350);
 }
 
 function cleanReportText(text) {
@@ -405,25 +523,15 @@ function cleanReportText(text) {
     .trim();
 }
 
-function cleanReportText(text) {
-  return String(text || '')
-    .replace(/\*\*/g, '')
-    .replace(/\r/g, '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+async function callAI(messages, maxTokens=500) {
+  if (state.aiProvider === 'cimatec') {
+    return await window.electronAPI.callCimatec({ messages, maxTokens });
+  }
+
+  return await callOpenAICompatible(messages, maxTokens);
 }
 
-function cleanReportText(text) {
-  return String(text || '')
-    .replace(/\*\*/g, '')
-    .replace(/\r/g, '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-async function callNavigator(messages, maxTokens=500) {
+async function callOpenAICompatible(messages, maxTokens=500) {
   const res = await fetch(NAVIGATOR_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.apiKey}` },
@@ -498,3 +606,4 @@ handleSend = async function() {
 }
 
 init();
+

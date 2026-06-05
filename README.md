@@ -31,7 +31,7 @@ Share the entire `win-unpacked` folder, not only the `.exe`.
 4. Upload completed pre-talk reflection `.docx`.
 5. Click Start Debriefing.
 6. Complete the conversation.
-7. Generate the final DOCX and upload to Canvas.
+7. Generate the final DOCX and submit it approprietely.
 
 ## Behavior
 

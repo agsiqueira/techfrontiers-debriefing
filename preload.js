@@ -1,5 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
+
 contextBridge.exposeInMainWorld('electronAPI', {
   selectPretalkFile: () => ipcRenderer.invoke('select-pretalk-file'),
-  saveDocxReport: (payload) => ipcRenderer.invoke('save-docx-report', payload)
+  saveDocxReport: (payload) => ipcRenderer.invoke('save-docx-report', payload),
+  callCimatec: (payload) => ipcRenderer.invoke('call-cimatec', payload)
 });
